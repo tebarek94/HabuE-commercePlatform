@@ -7,48 +7,6 @@ const router = Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *         email:
- *           type: string
- *           format: email
- *         first_name:
- *           type: string
- *         last_name:
- *           type: string
- *         phone:
- *           type: string
- *         role:
- *           type: string
- *           enum: [client, admin]
- *         is_active:
- *           type: boolean
- *         email_verified:
- *           type: boolean
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
- *     AuthResponse:
- *       type: object
- *       properties:
- *         user:
- *           $ref: '#/components/schemas/User'
- *         token:
- *           type: string
- *         refreshToken:
- *           type: string
- */
-
-/**
- * @swagger
  * /api/auth/register:
  *   post:
  *     summary: Register a new user
@@ -80,17 +38,6 @@ const router = Router();
  *     responses:
  *       201:
  *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/AuthResponse'
  *       400:
  *         description: Validation error
  *       409:
@@ -122,17 +69,6 @@ router.post('/register', validateUserRegistration, AuthController.register);
  *     responses:
  *       200:
  *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/AuthResponse'
  *       401:
  *         description: Invalid credentials
  */
@@ -149,20 +85,6 @@ router.post('/login', validateUserLogin, AuthController.login);
  *     responses:
  *       200:
  *         description: Profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
  */
@@ -192,20 +114,6 @@ router.get('/profile', authenticate, AuthController.getProfile);
  *     responses:
  *       200:
  *         description: Profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
  */
@@ -276,20 +184,6 @@ router.post('/logout', AuthController.logout);
  *     responses:
  *       200:
  *         description: Token refreshed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     token:
- *                       type: string
  *       400:
  *         description: Invalid refresh token
  */

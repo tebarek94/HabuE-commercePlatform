@@ -1,10 +1,5 @@
--- Flower E-commerce Database Schema
--- This file initializes the database with tables and sample data
-
--- Create database if it doesn't exist
 CREATE DATABASE IF NOT EXISTS flower_ecommerce;
 USE flower_ecommerce;
-
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -110,31 +105,31 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 -- Insert sample categories
 INSERT INTO categories (name, description, image_url) VALUES
-('Roses', 'Beautiful roses in various colors', 'https://example.com/roses.jpg'),
-('Tulips', 'Colorful tulips for spring', 'https://example.com/tulips.jpg'),
-('Lilies', 'Elegant lilies for special occasions', 'https://example.com/lilies.jpg'),
-('Sunflowers', 'Bright sunflowers to brighten your day', 'https://example.com/sunflowers.jpg'),
-('Orchids', 'Exotic orchids for sophisticated taste', 'https://example.com/orchids.jpg'),
-('Mixed Bouquets', 'Beautiful mixed flower arrangements', 'https://example.com/mixed.jpg');
+('Roses', 'Beautiful roses in various colors', 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400'),
+('Tulips', 'Colorful tulips for spring', 'https://images.unsplash.com/photo-1520763185298-1b434c919102?w=400'),
+('Lilies', 'Elegant lilies for special occasions', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400'),
+('Sunflowers', 'Bright sunflowers to brighten your day', 'https://images.unsplash.com/photo-1597848212624-e19c2b0a0b0e?w=400'),
+('Orchids', 'Exotic orchids for sophisticated taste', 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400'),
+('Mixed Bouquets', 'Beautiful mixed flower arrangements', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400');
 
 -- Insert sample products
 INSERT INTO products (name, description, price, category_id, image_url, stock_quantity) VALUES
-('Red Rose Bouquet', 'A dozen beautiful red roses', 29.99, 1, 'https://example.com/red-roses.jpg', 50),
-('White Rose Bouquet', 'Elegant white roses', 32.99, 1, 'https://example.com/white-roses.jpg', 30),
-('Pink Tulip Bouquet', 'Fresh pink tulips', 24.99, 2, 'https://example.com/pink-tulips.jpg', 40),
-('Yellow Sunflower Bouquet', 'Bright yellow sunflowers', 19.99, 4, 'https://example.com/sunflowers.jpg', 25),
-('White Lily Bouquet', 'Pure white lilies', 35.99, 3, 'https://example.com/white-lilies.jpg', 20),
-('Purple Orchid Plant', 'Exotic purple orchid', 45.99, 5, 'https://example.com/purple-orchid.jpg', 15),
-('Mixed Spring Bouquet', 'Colorful spring flowers', 27.99, 6, 'https://example.com/spring-mixed.jpg', 35),
-('Premium Rose Arrangement', 'Luxury rose arrangement', 59.99, 1, 'https://example.com/premium-roses.jpg', 10);
+('Red Rose Bouquet', 'A dozen beautiful red roses', 29.99, 1, 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400', 50),
+('White Rose Bouquet', 'Elegant white roses', 32.99, 1, 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 30),
+('Pink Tulip Bouquet', 'Fresh pink tulips', 24.99, 2, 'https://images.unsplash.com/photo-1520763185298-1b434c919102?w=400', 40),
+('Yellow Sunflower Bouquet', 'Bright yellow sunflowers', 19.99, 4, 'https://images.unsplash.com/photo-1597848212624-e19c2b0a0b0e?w=400', 25),
+('White Lily Bouquet', 'Pure white lilies', 35.99, 3, 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 20),
+('Purple Orchid Plant', 'Exotic purple orchid', 45.99, 5, 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', 15),
+('Mixed Spring Bouquet', 'Colorful spring flowers', 27.99, 6, 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 35),
+('Premium Rose Arrangement', 'Luxury rose arrangement', 59.99, 1, 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400', 10);
 
 -- Insert sample admin user (password: admin123)
 INSERT INTO users (email, password, first_name, last_name, role) VALUES
-('admin@flowerecommerce.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8K8K8K8', 'Admin', 'User', 'admin');
+('admin@flowerecommerce.com', '$2a$12$IrbNIbbQc8Nt3j/riAyEeucNc9KfY5GlUo1LAJMeIqjp2uu46A8pS', 'Admin', 'User', 'admin');
 
 -- Insert sample client user (password: client123)
 INSERT INTO users (email, password, first_name, last_name, phone) VALUES
-('client@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8K8K8K8', 'John', 'Doe', '+1234567890');
+('client@example.com', '$2a$12$I2qw9mmno8uikg7h/F1DTOA4CTeElM1AcWA5Ijk16OhuZqXgb812e', 'John', 'Doe', '+1234567890');
 
 -- Create indexes for better performance
 CREATE INDEX idx_products_price_range ON products(price);

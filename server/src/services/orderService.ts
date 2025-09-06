@@ -246,40 +246,310 @@ export class OrderService {
     }
   }
 
-  // Get order statistics
-  static async getOrderStats(): Promise<{
-    totalOrders: number;
-    pendingOrders: number;
-    completedOrders: number;
-    cancelledOrders: number;
-    totalRevenue: number;
-  }> {
+
+  // Create new order
+  static async createOrder(
+    userId: number,
+    orderData: {
+      shipping_address: string;
+      billing_address?: string;
+      payment_method?: string;
+      notes?: string;
+      items: Array<{
+        product_id: number;
+        quantity: number;
+        price: number;
+      }>;
+    }
+  ): Promise<OrderWithItems> {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      // Calculate total amount
+      const totalAmount = orderData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      // Create order
+      const [orderResult] = await connection.execute(
+        `INSERT INTO orders (
+          user_id, order_number, total_amount, status, shipping_address, 
+          billing_address, payment_method, payment_status, notes
+        ) VALUES (?, ?, ?, 'pending', ?, ?, ?, 'pending', ?)`,
+        [
+          userId,
+          orderNumber,
+          totalAmount,
+          orderData.shipping_address,
+          orderData.billing_address || null,
+          orderData.payment_method || null,
+          orderData.notes || null,
+        ]
+      );
+
+      const orderId = (orderResult as any).insertId;
+
+      // Create order items
+      for (const item of orderData.items) {
+        await connection.execute(
+          `INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)`,
+          [orderId, item.product_id, item.quantity, item.price]
+        );
+
+        // Update product stock
+        await connection.execute(
+          `UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?`,
+          [item.quantity, item.product_id]
+        );
+      }
+
+      await connection.commit();
+
+      // Return the created order with items
+      const createdOrder = await this.getOrderById(orderId);
+      if (!createdOrder) {
+        throw new CustomError('Failed to retrieve created order', 500);
+      }
+
+      logger.info(`Order created: ${orderNumber} for user ${userId}`);
+      return createdOrder;
+
+    } catch (error) {
+      await connection.rollback();
+      logger.error('Create order error:', error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError('Failed to create order', 500);
+    } finally {
+      connection.release();
+    }
+  }
+
+  // Get order statistics (Admin only)
+  static async getOrderStats(): Promise<any> {
     try {
       const connection = await pool.getConnection();
 
-      const [stats] = await connection.execute(`
-        SELECT 
-          COUNT(*) as total_orders,
-          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders,
-          COUNT(CASE WHEN status = 'delivered' THEN 1 END) as completed_orders,
-          COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders,
-          COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END), 0) as total_revenue
+      // Get total orders
+      const [totalOrdersResult] = await connection.execute('SELECT COUNT(*) as total FROM orders');
+      const totalOrders = (totalOrdersResult as any[])[0].total;
+
+      // Get orders by status
+      const [statusStats] = await connection.execute(`
+        SELECT status, COUNT(*) as count
         FROM orders
+        GROUP BY status
+      `);
+
+      // Get orders by payment status
+      const [paymentStats] = await connection.execute(`
+        SELECT payment_status, COUNT(*) as count
+        FROM orders
+        GROUP BY payment_status
+      `);
+
+      // Get total revenue
+      const [revenueResult] = await connection.execute(`
+        SELECT SUM(total_amount) as total_revenue
+        FROM orders
+        WHERE payment_status = 'paid'
+      `);
+      const totalRevenue = (revenueResult as any[])[0].total_revenue || 0;
+
+      // Get recent orders count (last 30 days)
+      const [recentOrdersResult] = await connection.execute(`
+        SELECT COUNT(*) as count
+        FROM orders
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      `);
+      const recentOrders = (recentOrdersResult as any[])[0].count;
+
+      // Get monthly revenue trend (last 12 months)
+      const [monthlyRevenue] = await connection.execute(`
+        SELECT 
+          DATE_FORMAT(created_at, '%Y-%m') as month,
+          SUM(total_amount) as revenue,
+          COUNT(*) as order_count
+        FROM orders
+        WHERE payment_status = 'paid'
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month
+      `);
+
+      // Get top customers by order value
+      const [topCustomers] = await connection.execute(`
+        SELECT 
+          u.id,
+          CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+          u.email,
+          COUNT(o.id) as order_count,
+          SUM(o.total_amount) as total_spent
+        FROM users u
+        JOIN orders o ON u.id = o.user_id
+        WHERE o.payment_status = 'paid'
+        GROUP BY u.id, u.first_name, u.last_name, u.email
+        ORDER BY total_spent DESC
+        LIMIT 10
+      `);
+
+      // Get order status timeline for recent orders
+      const [statusTimeline] = await connection.execute(`
+        SELECT 
+          DATE(created_at) as date,
+          status,
+          COUNT(*) as count
+        FROM orders
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY DATE(created_at), status
+        ORDER BY date DESC, status
       `);
 
       connection.release();
 
-      const result = (stats as any[])[0];
       return {
-        totalOrders: result.total_orders,
-        pendingOrders: result.pending_orders,
-        completedOrders: result.completed_orders,
-        cancelledOrders: result.cancelled_orders,
-        totalRevenue: result.total_revenue,
+        totalOrders,
+        totalRevenue,
+        recentOrders,
+        statusBreakdown: statusStats,
+        paymentStatusBreakdown: paymentStats,
+        monthlyRevenue,
+        topCustomers,
+        statusTimeline,
       };
     } catch (error) {
       logger.error('Get order stats error:', error);
       throw new CustomError('Failed to get order statistics', 500);
+    }
+  }
+
+  // Get order analytics with date range
+  static async getOrderAnalytics(
+    startDate?: string,
+    endDate?: string,
+    groupBy: 'day' | 'week' | 'month' = 'day'
+  ): Promise<any> {
+    try {
+      const connection = await pool.getConnection();
+
+      let dateFormat: string;
+      let intervalClause = '';
+      
+      switch (groupBy) {
+        case 'day':
+          dateFormat = '%Y-%m-%d';
+          intervalClause = startDate ? `AND created_at >= '${startDate}'` : '';
+          if (endDate) intervalClause += ` AND created_at <= '${endDate}'`;
+          break;
+        case 'week':
+          dateFormat = '%Y-%u';
+          intervalClause = startDate ? `AND created_at >= '${startDate}'` : '';
+          if (endDate) intervalClause += ` AND created_at <= '${endDate}'`;
+          break;
+        case 'month':
+          dateFormat = '%Y-%m';
+          intervalClause = startDate ? `AND created_at >= '${startDate}'` : '';
+          if (endDate) intervalClause += ` AND created_at <= '${endDate}'`;
+          break;
+        default:
+          dateFormat = '%Y-%m-%d';
+      }
+
+      // Get order trends
+      const [orderTrends] = await connection.execute(`
+        SELECT 
+          DATE_FORMAT(created_at, '${dateFormat}') as period,
+          COUNT(*) as order_count,
+          SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as revenue,
+          AVG(total_amount) as avg_order_value
+        FROM orders
+        WHERE 1=1 ${intervalClause}
+        GROUP BY DATE_FORMAT(created_at, '${dateFormat}')
+        ORDER BY period
+      `);
+
+      // Get product performance
+      const [productPerformance] = await connection.execute(`
+        SELECT 
+          p.id,
+          p.name,
+          p.category_id,
+          c.name as category_name,
+          SUM(oi.quantity) as total_quantity_sold,
+          SUM(oi.quantity * oi.price) as total_revenue,
+          COUNT(DISTINCT oi.order_id) as order_count
+        FROM products p
+        JOIN order_items oi ON p.id = oi.product_id
+        JOIN orders o ON oi.order_id = o.id
+        JOIN categories c ON p.category_id = c.id
+        WHERE o.payment_status = 'paid' ${intervalClause}
+        GROUP BY p.id, p.name, p.category_id, c.name
+        ORDER BY total_revenue DESC
+        LIMIT 20
+      `);
+
+      // Get customer analytics
+      const [customerAnalytics] = await connection.execute(`
+        SELECT 
+          COUNT(DISTINCT user_id) as total_customers,
+          COUNT(DISTINCT CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN user_id END) as new_customers_30d,
+          AVG(total_amount) as avg_order_value,
+          MAX(total_amount) as max_order_value,
+          MIN(total_amount) as min_order_value
+        FROM orders
+        WHERE payment_status = 'paid' ${intervalClause}
+      `);
+
+      connection.release();
+
+      return {
+        orderTrends,
+        productPerformance,
+        customerAnalytics,
+      };
+    } catch (error) {
+      logger.error('Get order analytics error:', error);
+      throw new CustomError('Failed to get order analytics', 500);
+    }
+  }
+
+  // Get order status history for tracking
+  static async getOrderStatusHistory(orderId: number): Promise<any[]> {
+    try {
+      const connection = await pool.getConnection();
+
+      // For now, we'll create a simple status history based on order updates
+      // In a real application, you might want to create a separate order_status_history table
+      const [history] = await connection.execute(`
+        SELECT 
+          'created' as status,
+          created_at as timestamp,
+          'Order created' as description
+        FROM orders
+        WHERE id = ?
+        
+        UNION ALL
+        
+        SELECT 
+          'updated' as status,
+          updated_at as timestamp,
+          CONCAT('Order updated - Status: ', status, ', Payment: ', payment_status) as description
+        FROM orders
+        WHERE id = ? AND updated_at > created_at
+        
+        ORDER BY timestamp DESC
+      `, [orderId, orderId]);
+
+      connection.release();
+
+      return history as any[];
+    } catch (error) {
+      logger.error('Get order status history error:', error);
+      throw new CustomError('Failed to get order status history', 500);
     }
   }
 }

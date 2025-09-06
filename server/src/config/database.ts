@@ -8,7 +8,7 @@ const config = {
   port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'habu_ecommerce',
+  database: process.env.DB_NAME || 'flower_ecommerce',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -115,18 +115,35 @@ export const initializeDatabase = async (): Promise<void> => {
     // Create admin user if it doesn't exist
     const [adminUsers] = await connection.execute(
       'SELECT id FROM users WHERE email = ?',
-      ['admin@habu.com']
+      ['admin@flowerecommerce.com']
     );
 
     if ((adminUsers as any[]).length === 0) {
       const bcrypt = require('bcryptjs');
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash('admin123', 12);
       
       await connection.execute(
         'INSERT INTO users (email, password, first_name, last_name, role, is_active, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        ['admin@habu.com', hashedPassword, 'Admin', 'User', 'admin', true, true]
+        ['admin@flowerecommerce.com', hashedPassword, 'Admin', 'User', 'admin', true, true]
       );
-      console.log('✅ Admin user created: admin@habu.com / admin123');
+      console.log('✅ Admin user created: admin@flowerecommerce.com / admin123');
+    }
+
+    // Create client user if it doesn't exist
+    const [clientUsers] = await connection.execute(
+      'SELECT id FROM users WHERE email = ?',
+      ['client@example.com']
+    );
+
+    if ((clientUsers as any[]).length === 0) {
+      const bcrypt = require('bcryptjs');
+      const hashedPassword = await bcrypt.hash('client123', 12);
+      
+      await connection.execute(
+        'INSERT INTO users (email, password, first_name, last_name, phone, is_active, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ['client@example.com', hashedPassword, 'John', 'Doe', '+1234567890', true, true]
+      );
+      console.log('✅ Client user created: client@example.com / client123');
     }
 
     connection.release();

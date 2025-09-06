@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Eye, Edit, Search, Filter, User, Mail, Phone, Calendar, Shield, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, Edit, Search, Filter, User, Mail, Calendar, Shield, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
 import Modal from '@/components/ui/Modal';
 import Alert from '@/components/ui/Alert';
+import { adminApi } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
+import toast from 'react-hot-toast';
+import { useAuth } from '@/store/authStore';
+import { canPerformAdminActions } from '@/utils/roleUtils';
+import CustomerEditForm from '@/components/admin/CustomerEditForm';
 
 interface Customer {
   id: number;
@@ -31,66 +37,64 @@ const AdminCustomers: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [pagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0
+  });
 
-  // Mock data - replace with actual API calls
-  const customers: Customer[] = [
-    {
-      id: 1,
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'john@example.com',
-      phone: '+1 (555) 123-4567',
-      role: 'client',
-      is_active: true,
-      email_verified: true,
-      created_at: '2024-01-15T10:30:00Z',
-      updated_at: '2024-01-17T14:20:00Z',
-      total_orders: 5,
-      total_spent: 450.75
-    },
-    {
-      id: 2,
-      first_name: 'Jane',
-      last_name: 'Smith',
-      email: 'jane@example.com',
-      phone: '+1 (555) 234-5678',
-      role: 'client',
-      is_active: true,
-      email_verified: true,
-      created_at: '2024-01-20T09:15:00Z',
-      updated_at: '2024-01-21T16:45:00Z',
-      total_orders: 3,
-      total_spent: 195.50
-    },
-    {
-      id: 3,
-      first_name: 'Bob',
-      last_name: 'Johnson',
-      email: 'bob@example.com',
-      phone: '+1 (555) 345-6789',
-      role: 'client',
-      is_active: false,
-      email_verified: false,
-      created_at: '2024-01-22T14:30:00Z',
-      updated_at: '2024-01-22T14:30:00Z',
-      total_orders: 1,
-      total_spent: 125.00
-    },
-    {
-      id: 4,
-      first_name: 'Alice',
-      last_name: 'Brown',
-      email: 'alice@example.com',
-      phone: '+1 (555) 456-7890',
-      role: 'admin',
-      is_active: true,
-      email_verified: true,
-      created_at: '2024-01-10T08:00:00Z',
-      updated_at: '2024-01-23T16:45:00Z',
-      total_orders: 0,
-      total_spent: 0
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const hasAdminAccess = canPerformAdminActions(user);
+  
+  // Debug logging
+  console.log('AdminCustomers Debug:', {
+    isLoading,
+    isAuthenticated,
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      is_active: user.is_active,
+      first_name: user.first_name,
+      last_name: user.last_name
+    } : null,
+    hasAdminAccess,
+    hasAdminRole: user?.role === 'admin'
+  });
+
+  // Fetch customers using admin API
+  const fetchCustomers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await adminApi.getAllUsers({
+        page: pagination.page,
+        limit: pagination.limit,
+      });
+      
+      // Transform the response to match our Customer interface
+      const customerData = (response as any[]).map(user => ({
+        ...user,
+        total_orders: user.total_orders || 0,
+        total_spent: user.total_spent || 0,
+      }));
+      
+      setCustomers(customerData);
+    } catch (err) {
+      console.error('Error fetching customers:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+      setCustomers([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCustomers();
+  }, [pagination.page]);
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
@@ -110,10 +114,13 @@ const AdminCustomers: React.FC = () => {
   const handleToggleStatus = async (customerId: number, currentStatus: boolean) => {
     setLoading(true);
     try {
-      // API call to toggle customer status
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await adminApi.updateUserStatus(customerId, !currentStatus);
+      await fetchCustomers();
+      toast.success(`Customer ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (err) {
-      setError('Failed to update customer status');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update customer status';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,12 +129,15 @@ const AdminCustomers: React.FC = () => {
   const handleRoleChange = async (customerId: number, newRole: 'client' | 'admin') => {
     setLoading(true);
     try {
-      // API call to change customer role
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await adminApi.updateUserRole(customerId, newRole);
+      await fetchCustomers();
       setShowEditModal(false);
       setSelectedCustomer(null);
+      toast.success(`Customer role updated to ${newRole} successfully`);
     } catch (err) {
-      setError('Failed to update customer role');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update customer role';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -141,18 +151,12 @@ const AdminCustomers: React.FC = () => {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const columns = [
     {
       key: 'name',
       label: 'Customer',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
             <User className="h-5 w-5 text-primary-600 dark:text-primary-400" />
@@ -169,7 +173,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'contact',
       label: 'Contact',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <div>
           <p className="text-sm text-gray-900 dark:text-gray-100">
             {customer.phone || 'No phone'}
@@ -193,7 +197,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'role',
       label: 'Role',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <span className={cn(
           'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
           customer.role === 'admin'
@@ -208,7 +212,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'stats',
       label: 'Stats',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <div>
           <p className="text-sm text-gray-900 dark:text-gray-100">
             {customer.total_orders} orders
@@ -222,7 +226,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'status',
       label: 'Status',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <button
           onClick={() => handleToggleStatus(customer.id, customer.is_active)}
           className={cn(
@@ -239,7 +243,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'joined',
       label: 'Joined',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
           <Calendar className="h-3 w-3" />
           <span>{formatDate(customer.created_at)}</span>
@@ -249,7 +253,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: unknown, customer: Customer) => (
+      render: (_value: unknown, customer: Customer) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={() => {
@@ -273,6 +277,53 @@ const AdminCustomers: React.FC = () => {
       ),
     },
   ];
+
+  // Show access denied if user doesn't have admin permissions
+  // Show loading state while auth is being checked
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if user doesn't have admin permissions
+  // Allow access if user has admin role (fallback for backend issues)
+  const hasAdminRole = user?.role === 'admin';
+  const shouldDenyAccess = !hasAdminAccess && !hasAdminRole;
+  
+  if (shouldDenyAccess) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            You don't have permission to access this page. Admin access is required.
+          </p>
+          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-6 text-sm">
+            <p className="font-medium mb-2">Debug Info:</p>
+            <p>User: {user?.email || 'Not logged in'}</p>
+            <p>Role: {user?.role || 'No role'}</p>
+            <p>Active: {user?.is_active?.toString() || 'undefined'}</p>
+            <p>Has Admin Access: {hasAdminAccess.toString()}</p>
+            <p>Has Admin Role: {hasAdminRole.toString()}</p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => window.location.href = '/'}
+          >
+            Go to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -476,49 +527,15 @@ const AdminCustomers: React.FC = () => {
         onClose={() => setShowEditModal(false)}
         title={`Edit Customer - ${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Change Role
-            </label>
-            <select 
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              defaultValue={selectedCustomer?.role}
-            >
-              <option value="client">Client</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Account Status
-            </label>
-            <select 
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              defaultValue={selectedCustomer?.is_active ? 'active' : 'inactive'}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div className="flex space-x-3 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => setShowEditModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => selectedCustomer && handleRoleChange(selectedCustomer.id, 'admin')}
-              loading={loading}
-            >
-              Save Changes
-            </Button>
-          </div>
-        </div>
+        <CustomerEditForm
+          customer={selectedCustomer}
+          onSubmit={handleRoleChange}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedCustomer(null);
+          }}
+          loading={loading}
+        />
       </Modal>
     </div>
   );

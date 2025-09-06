@@ -31,6 +31,19 @@ export interface Product {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Flower-specific fields
+  color?: string;
+  season?: string;
+  care_instructions?: string;
+  bloom_time?: string;
+  height?: string;
+  fragrance?: string;
+  vase_life?: number; // in days
+  origin?: string;
+  difficulty_level?: 'easy' | 'medium' | 'hard';
+  water_needs?: 'low' | 'medium' | 'high';
+  light_requirements?: 'full_sun' | 'partial_sun' | 'shade';
+  additional_images?: string[];
 }
 
 export interface Category {

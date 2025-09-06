@@ -4,6 +4,7 @@ import { ArrowRight, Heart, Truck, Shield, Star } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProductGrid from '@/components/products/ProductGrid';
 import { useProducts } from '@/hooks/useProducts';
+import SmartHomeRedirect from '@/components/SmartHomeRedirect';
 
 const HomePage: React.FC = () => {
   const { products, loading } = useProducts({ 
@@ -34,7 +35,9 @@ const HomePage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <>
+      <SmartHomeRedirect />
+      <div>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -133,7 +136,7 @@ const HomePage: React.FC = () => {
             Ready to Brighten Someone's Day?
           </h2>
           <p className="text-xl mb-8 text-primary-100">
-            Order now and get free delivery on orders over $50
+            Order now and get free delivery on orders over 2,500 ETB
           </p>
           <Link to="/products">
             <Button variant="secondary" size="lg">
@@ -142,7 +145,8 @@ const HomePage: React.FC = () => {
           </Link>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -21,6 +21,7 @@ export interface CreateUserRequest {
   first_name: string;
   last_name: string;
   phone?: string;
+  role?: string;
 }
 
 export interface LoginRequest {
@@ -138,10 +139,24 @@ export interface CreateOrderRequest {
   billing_address?: string;
   payment_method?: string;
   notes?: string;
+  items: { product_id: number; quantity: number; price: number; }[];
 }
 
 export interface UpdateOrderStatusRequest {
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  description?: string;
+  image_url?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name?: string;
+  description?: string;
+  image_url?: string;
+  is_active?: boolean;
 }
 
 // API Response Types
@@ -177,7 +192,7 @@ export interface JwtPayload {
 }
 
 // Request Types with Authentication
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Omit<Request, 'user'> {
   user?: JwtPayload;
 }
 

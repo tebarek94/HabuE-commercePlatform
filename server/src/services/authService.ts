@@ -9,7 +9,7 @@ export class AuthService {
   // Register a new user
   static async register(userData: CreateUserRequest): Promise<AuthResponse> {
     try {
-      const { email, password, first_name, last_name, phone } = userData;
+      const { email, password, first_name, last_name, phone, role } = userData;
 
       // Check if user already exists
       const connection = await pool.getConnection();
@@ -30,7 +30,7 @@ export class AuthService {
       // Create user
       const [result] = await connection.execute(
         'INSERT INTO users (email, password, first_name, last_name, phone, role, is_active, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [email, hashedPassword, first_name, last_name, phone || null, 'client', true, false]
+        [email, hashedPassword, first_name, last_name, phone || null, role || 'client', true, false]
       );
 
       const insertResult = result as any;

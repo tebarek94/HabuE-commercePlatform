@@ -2,12 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, Star, Truck, Shield, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { productsApi } from '@/lib/api';
+import { clientProductsApi } from '@/lib/api';
 import { Product } from '@/types';
 import Button from '@/components/ui/Button';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { formatCurrency } from '@/lib/utils';
-import { getImageUrl } from '@/utils/imageUtils';
+
+// Utility function for image handling
+const getImageUrl = (imageUrl?: string): string => {
+  if (!imageUrl) return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42MjcgMzYgMzYgMzAuNjI3IDM2IDI0QzM2IDE3LjM3MjYgMzAuNjI3IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42MjcgMTcuMzcyNiAzNiAyNCAzNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMwQzI2LjIwOTEgMzAgMjggMjguMjA5MSAyOCAyNkMyOCAyMy43OTA5IDI2LjIwOTEgMjIgMjQgMjJDMjEuNzkwOSAyMiAyMCAyMy43OTA5IDIwIDI2QzIwIDI4LjIwOTEgMjEuNzkwOSAzMCAyNCAzMFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `http://localhost:3001${imageUrl}`;
+};
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +35,7 @@ const ProductDetailPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const productData = await productsApi.getProduct(Number(id));
+        const productData = await clientProductsApi.getProduct(Number(id));
         setProduct(productData as Product);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch product');
@@ -94,7 +100,7 @@ const ProductDetailPage: React.FC = () => {
   const isOutOfStock = product.stock_quantity === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">
@@ -247,7 +253,7 @@ const ProductDetailPage: React.FC = () => {
                 <Truck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Free Delivery</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">On orders over $50</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">On orders over 2,500 ETB</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">

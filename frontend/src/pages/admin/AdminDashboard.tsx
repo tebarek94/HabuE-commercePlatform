@@ -82,6 +82,9 @@ interface TopProduct {
 const AdminDashboard: React.FC = () => {
   const { stats, recentOrders, topProducts, loading, error, refetch } = useDashboard();
 
+  // Debug logging
+  console.log('AdminDashboard render:', { stats, recentOrders, topProducts, loading, error });
+
   const getStatusColor = (status: RecentOrder['status']) => {
     switch (status) {
       case 'pending':
@@ -140,6 +143,46 @@ const AdminDashboard: React.FC = () => {
         <Alert variant="error" onClose={() => refetch()}>
           {error}
         </Alert>
+        
+        {/* Fallback dashboard content */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Revenue"
+            value="Loading..."
+            icon={DollarSign}
+            trend="neutral"
+          />
+          <StatCard
+            title="Total Orders"
+            value="Loading..."
+            icon={ShoppingCart}
+            trend="neutral"
+          />
+          <StatCard
+            title="Total Products"
+            value="Loading..."
+            icon={Package}
+            trend="neutral"
+          />
+          <StatCard
+            title="Total Customers"
+            value="Loading..."
+            icon={Users}
+            trend="neutral"
+          />
+        </div>
+        
+        <div className="text-center py-8">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Unable to load dashboard data. Please check your connection and try again.
+          </p>
+          <button 
+            onClick={refetch}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -148,45 +191,74 @@ const AdminDashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400">
           Welcome back! Here's what's happening with your flower shop today.
         </p>
       </div>
 
       {/* Stats Grid */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Revenue"
-            value={formatCurrency(stats.totalRevenue)}
-            change={stats.revenueChange}
-            icon={DollarSign}
-            trend={stats.revenueChange >= 0 ? "up" : "down"}
-          />
-          <StatCard
-            title="Total Orders"
-            value={stats.totalOrders.toLocaleString()}
-            change={stats.ordersChange}
-            icon={ShoppingCart}
-            trend={stats.ordersChange >= 0 ? "up" : "down"}
-          />
-          <StatCard
-            title="Total Products"
-            value={stats.totalProducts}
-            change={stats.productsChange}
-            icon={Package}
-            trend={stats.productsChange >= 0 ? "up" : "down"}
-          />
-          <StatCard
-            title="Total Customers"
-            value={stats.totalCustomers.toLocaleString()}
-            change={stats.customersChange}
-            icon={Users}
-            trend={stats.customersChange >= 0 ? "up" : "down"}
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats ? (
+          <>
+            <StatCard
+              title="Total Revenue"
+              value={formatCurrency(stats.totalRevenue)}
+              change={stats.revenueChange}
+              icon={DollarSign}
+              trend={stats.revenueChange >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              title="Total Orders"
+              value={stats.totalOrders.toLocaleString()}
+              change={stats.ordersChange}
+              icon={ShoppingCart}
+              trend={stats.ordersChange >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              title="Total Products"
+              value={stats.totalProducts}
+              change={stats.productsChange}
+              icon={Package}
+              trend={stats.productsChange >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              title="Total Customers"
+              value={stats.totalCustomers.toLocaleString()}
+              change={stats.customersChange}
+              icon={Users}
+              trend={stats.customersChange >= 0 ? "up" : "down"}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Total Revenue"
+              value="Loading..."
+              icon={DollarSign}
+              trend="neutral"
+            />
+            <StatCard
+              title="Total Orders"
+              value="Loading..."
+              icon={ShoppingCart}
+              trend="neutral"
+            />
+            <StatCard
+              title="Total Products"
+              value="Loading..."
+              icon={Package}
+              trend="neutral"
+            />
+            <StatCard
+              title="Total Customers"
+              value="Loading..."
+              icon={Users}
+              trend="neutral"
+            />
+          </>
+        )}
+      </div>
 
       {/* Charts and Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -284,23 +356,85 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors">
+            <button 
+              onClick={() => window.location.href = '/admin/products'}
+              className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
+            >
               <Package className="h-6 w-6 text-primary-600 dark:text-primary-400 mb-2" />
               <p className="font-medium text-gray-900 dark:text-gray-100">Add New Product</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create a new flower product</p>
             </button>
             
-            <button className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+            <button 
+              onClick={() => window.location.href = '/admin/orders'}
+              className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer"
+            >
               <ShoppingCart className="h-6 w-6 text-green-600 dark:text-green-400 mb-2" />
               <p className="font-medium text-gray-900 dark:text-gray-100">Process Orders</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Review pending orders</p>
             </button>
             
-            <button className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+            <button 
+              onClick={() => window.location.href = '/admin/customers'}
+              className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
+            >
               <Users className="h-6 w-6 text-purple-600 dark:text-purple-400 mb-2" />
               <p className="font-medium text-gray-900 dark:text-gray-100">Manage Customers</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">View customer accounts</p>
             </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Real-time Activity Feed */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Real-time Activity
+            </h3>
+            <button 
+              onClick={refetch}
+              className="text-sm text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+            >
+              Refresh
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentOrders.length > 0 ? (
+              recentOrders.slice(0, 5).map((order) => (
+                <div key={order.id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <ShoppingCart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      New order from {order.customer_name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {order.order_number} • {formatCurrency(order.total)} • {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <ShoppingCart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  No recent activity
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Activity will appear here as customers place orders.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

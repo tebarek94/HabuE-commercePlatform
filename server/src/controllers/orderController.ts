@@ -154,4 +154,49 @@ export class OrderController {
       next(error);
     }
   }
+
+  // Create new order
+  static async createOrder(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        throw new CustomError('User not authenticated', 401);
+      }
+
+      const { shipping_address, billing_address, payment_method, notes, items } = req.body;
+
+      // Validate required fields
+      if (!shipping_address || !items || !Array.isArray(items) || items.length === 0) {
+        throw new CustomError('Shipping address and items are required', 400);
+      }
+
+      // Validate items
+      for (const item of items) {
+        if (!item.product_id || !item.quantity || !item.price) {
+          throw new CustomError('Each item must have product_id, quantity, and price', 400);
+        }
+        if (item.quantity <= 0) {
+          throw new CustomError('Item quantity must be greater than 0', 400);
+        }
+      }
+
+      const orderData = {
+        shipping_address,
+        billing_address,
+        payment_method,
+        notes,
+        items,
+      };
+
+      const order = await OrderService.createOrder(userId, orderData);
+
+      res.status(201).json({
+        success: true,
+        message: 'Order created successfully',
+        data: order,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

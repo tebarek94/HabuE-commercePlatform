@@ -45,12 +45,15 @@ api.interceptors.response.use(
                            error.config?.url?.includes('/auth/register');
       
       if (!isAuthRequest) {
+        console.log('401 Unauthorized - clearing auth state');
         // Token expired or invalid - clear Zustand storage
         localStorage.removeItem('auth-storage');
         // Redirect to login only if not already there
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
+      } else {
+        console.log('401 on auth request - not clearing state');
       }
     }
     
@@ -135,8 +138,8 @@ export const authApi = {
   },
 };
 
-// Products API
-export const productsApi = {
+// Client Products API (for viewing products only)
+export const clientProductsApi = {
   getProducts: async (params?: {
     page?: number;
     limit?: number;
@@ -144,11 +147,10 @@ export const productsApi = {
     min_price?: number;
     max_price?: number;
     search?: string;
-    is_active?: boolean;
     sort?: string;
     order?: 'asc' | 'desc';
   }) => {
-    const response = await api.get<ApiResponse>('/products', { params });
+    const response = await api.get<ApiResponse>('/client/products', { params });
     if (response.data.success) {
       return {
         data: response.data.data,
@@ -159,55 +161,7 @@ export const productsApi = {
   },
 
   getProduct: async (id: number) => {
-    const response = await api.get<ApiResponse>(`/products/${id}`);
-    return handleApiResponse(response);
-  },
-
-  createProduct: async (productData: {
-    name: string;
-    description: string;
-    price: number;
-    category_id: number;
-    image_url?: string;
-    stock_quantity: number;
-  }) => {
-    const response = await api.post<ApiResponse>('/products', productData);
-    return handleApiResponse(response);
-  },
-
-  createProductWithImage: async (formData: FormData) => {
-    const response = await api.post<ApiResponse>('/products/with-image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return handleApiResponse(response);
-  },
-
-  updateProduct: async (id: number, productData: {
-    name?: string;
-    description?: string;
-    price?: number;
-    category_id?: number;
-    image_url?: string;
-    stock_quantity?: number;
-    is_active?: boolean;
-  }) => {
-    const response = await api.put<ApiResponse>(`/products/${id}`, productData);
-    return handleApiResponse(response);
-  },
-
-  updateProductWithImage: async (id: number, formData: FormData) => {
-    const response = await api.put<ApiResponse>(`/products/${id}/with-image`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return handleApiResponse(response);
-  },
-
-  deleteProduct: async (id: number) => {
-    const response = await api.delete<ApiResponse>(`/products/${id}`);
+    const response = await api.get<ApiResponse>(`/client/products/${id}`);
     return handleApiResponse(response);
   },
 
@@ -215,16 +169,30 @@ export const productsApi = {
     page?: number;
     limit?: number;
   }) => {
-    const response = await api.get<ApiResponse>('/products/search', {
+    const response = await api.get<ApiResponse>('/client/products/search', {
       params: { q: query, ...params },
     });
     return handleApiResponse(response);
   },
 
   getFeaturedProducts: async (limit = 8) => {
-    const response = await api.get<ApiResponse>('/products/featured', {
+    const response = await api.get<ApiResponse>('/client/products/featured', {
       params: { limit },
     });
+    if (response.data.success) {
+      return {
+        data: response.data.data,
+        pagination: response.data.pagination,
+      };
+    }
+    throw new Error(response.data.message || 'Request failed. Please try again.');
+  },
+
+  getProductsByCategory: async (categoryId: number, params?: {
+    page?: number;
+    limit?: number;
+  }) => {
+    const response = await api.get<ApiResponse>(`/client/products/category/${categoryId}`, { params });
     if (response.data.success) {
       return {
         data: response.data.data,
@@ -303,20 +271,15 @@ export const cartApi = {
   },
 };
 
-// Orders API
-export const ordersApi = {
-  getOrders: async (params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    payment_status?: string;
-  }) => {
-    const response = await api.get<ApiResponse>('/orders', { params });
+// Client Orders API (for client order management)
+export const clientOrdersApi = {
+  getOrders: async () => {
+    const response = await api.get<ApiResponse>('/client/orders');
     return handleApiResponse(response);
   },
 
   getOrder: async (id: number) => {
-    const response = await api.get<ApiResponse>(`/orders/${id}`);
+    const response = await api.get<ApiResponse>(`/client/orders/${id}`);
     return handleApiResponse(response);
   },
 
@@ -325,18 +288,14 @@ export const ordersApi = {
     billing_address?: string;
     payment_method?: string;
     notes?: string;
+    items: { product_id: number; quantity: number; price: number; }[];
   }) => {
-    const response = await api.post<ApiResponse>('/orders', orderData);
-    return handleApiResponse(response);
-  },
-
-  updateOrderStatus: async (id: number, status: string) => {
-    const response = await api.patch<ApiResponse>(`/orders/${id}/status`, { status });
+    const response = await api.post<ApiResponse>('/client/orders', orderData);
     return handleApiResponse(response);
   },
 
   cancelOrder: async (id: number) => {
-    const response = await api.patch<ApiResponse>(`/orders/${id}/cancel`);
+    const response = await api.patch<ApiResponse>(`/client/orders/${id}/cancel`);
     return handleApiResponse(response);
   },
 };
@@ -412,22 +371,122 @@ export const adminApi = {
     date_from?: string;
     date_to?: string;
   }) => {
-    const response = await api.get<ApiResponse>('/orders', { params });
+    const response = await api.get<ApiResponse>('/admin/orders', { params });
     return handleApiResponse(response);
   },
 
   getOrderById: async (id: number) => {
-    const response = await api.get<ApiResponse>(`/orders/${id}`);
+    const response = await api.get<ApiResponse>(`/admin/orders/${id}`);
     return handleApiResponse(response);
   },
 
   updateOrderStatus: async (id: number, status: string) => {
-    const response = await api.patch<ApiResponse>(`/orders/${id}/status`, { status });
+    const response = await api.patch<ApiResponse>(`/admin/orders/${id}/status`, { status });
     return handleApiResponse(response);
   },
 
   updatePaymentStatus: async (id: number, payment_status: string) => {
-    const response = await api.patch<ApiResponse>(`/orders/${id}/payment-status`, { payment_status });
+    const response = await api.patch<ApiResponse>(`/admin/orders/${id}/payment-status`, { payment_status });
+    return handleApiResponse(response);
+  },
+
+  getOrderStats: async () => {
+    const response = await api.get<ApiResponse>('/admin/orders/stats');
+    return handleApiResponse(response);
+  },
+
+  getOrderHistory: async (id: number) => {
+    const response = await api.get<ApiResponse>(`/admin/orders/${id}/history`);
+    return handleApiResponse(response);
+  },
+
+  getOrderAnalytics: async (params?: {
+    start_date?: string;
+    end_date?: string;
+    group_by?: 'day' | 'week' | 'month';
+  }) => {
+    const response = await api.get<ApiResponse>('/admin/orders/analytics', { params });
+    return handleApiResponse(response);
+  },
+
+  // Products CRUD (Admin)
+  getProducts: async (params?: {
+    page?: number;
+    limit?: number;
+    category_id?: number;
+    min_price?: number;
+    max_price?: number;
+    search?: string;
+    is_active?: boolean;
+    sort?: string;
+    order?: 'asc' | 'desc';
+  }) => {
+    const response = await api.get<ApiResponse>('/admin/products', { params });
+    if (response.data.success) {
+      return {
+        data: response.data.data,
+        pagination: response.data.pagination,
+      };
+    }
+    throw new Error(response.data.message || 'Request failed. Please try again.');
+  },
+
+  getProduct: async (id: number) => {
+    const response = await api.get<ApiResponse>(`/admin/products/${id}`);
+    return handleApiResponse(response);
+  },
+
+  createProduct: async (productData: {
+    name: string;
+    description: string;
+    price: number;
+    category_id: number;
+    image_url?: string;
+    stock_quantity: number;
+    is_active?: boolean;
+  }) => {
+    const response = await api.post<ApiResponse>('/admin/products', productData);
+    return handleApiResponse(response);
+  },
+
+  createProductWithImage: async (formData: FormData) => {
+    const response = await api.post<ApiResponse>('/admin/products/with-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return handleApiResponse(response);
+  },
+
+  updateProduct: async (id: number, productData: {
+    name?: string;
+    description?: string;
+    price?: number;
+    category_id?: number;
+    image_url?: string;
+    stock_quantity?: number;
+    is_active?: boolean;
+  }) => {
+    const response = await api.put<ApiResponse>(`/admin/products/${id}`, productData);
+    return handleApiResponse(response);
+  },
+
+  updateProductWithImage: async (id: number, formData: FormData) => {
+    const response = await api.put<ApiResponse>(`/admin/products/${id}/with-image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return handleApiResponse(response);
+  },
+
+  deleteProduct: async (id: number) => {
+    const response = await api.delete<ApiResponse>(`/admin/products/${id}`);
+    return handleApiResponse(response);
+  },
+
+  updateProductStock: async (id: number, quantity: number) => {
+    const response = await api.patch<ApiResponse>(`/admin/products/${id}/stock`, { quantity });
     return handleApiResponse(response);
   },
 

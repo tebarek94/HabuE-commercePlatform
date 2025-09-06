@@ -83,6 +83,10 @@ export const updateCartItemSchema = z.object({
 
 // Checkout Schema
 export const checkoutSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters').max(50, 'First name must be less than 50 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters').max(50, 'Last name must be less than 50 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  phone: z.string().min(10, 'Phone number must be at least 10 characters').max(15, 'Phone number must be less than 15 characters'),
   shipping_address: z.string().min(10, 'Shipping address must be at least 10 characters').max(500, 'Shipping address must be less than 500 characters'),
   billing_address: z.string().min(10, 'Billing address must be at least 10 characters').max(500, 'Billing address must be less than 500 characters').optional(),
   payment_method: z.enum(['credit_card', 'debit_card', 'paypal', 'cash_on_delivery'], {

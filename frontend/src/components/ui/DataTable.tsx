@@ -39,7 +39,8 @@ function DataTable<T>({
 
   return (
     <div className="overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -94,6 +95,29 @@ function DataTable<T>({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {data.map((item, index) => (
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="space-y-3">
+              {columns.map((column) => {
+                const value = renderCell(column, item);
+                return (
+                  <div key={String(column.key)} className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 sm:mb-0">
+                      {column.label}
+                    </dt>
+                    <dd className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                      {value}
+                    </dd>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Pagination */}

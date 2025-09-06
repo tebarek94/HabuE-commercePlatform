@@ -362,10 +362,10 @@ router.get('/:id', validateIdParam, ProductController.getProductById);
  *       403:
  *         description: Admin access required
  */
-router.post('/', authenticate, requireAdmin, validateProductCreation, ProductController.createProduct);
+router.post('/', authenticate, requireAdmin, validateProductCreation, ProductController.createProduct as any);
 
 // File upload routes
-router.post('/with-image', authenticate, requireAdmin, ProductController.createProductWithImage);
+router.post('/with-image', authenticate, requireAdmin, ProductController.createProductWithImage as any);
 
 /**
  * @swagger
@@ -425,10 +425,10 @@ router.post('/with-image', authenticate, requireAdmin, ProductController.createP
  *       404:
  *         description: Product not found
  */
-router.put('/:id', authenticate, requireAdmin, validateIdParam, validateProductUpdate, ProductController.updateProduct);
+router.put('/:id', authenticate, requireAdmin, validateIdParam, validateProductUpdate, ProductController.updateProduct as any);
 
 // File upload update route
-router.put('/:id/with-image', authenticate, requireAdmin, validateIdParam, ProductController.updateProductWithImage);
+router.put('/:id/with-image', authenticate, requireAdmin, validateIdParam, ProductController.updateProductWithImage as any);
 
 /**
  * @swagger
@@ -455,7 +455,7 @@ router.put('/:id/with-image', authenticate, requireAdmin, validateIdParam, Produ
  *       404:
  *         description: Product not found
  */
-router.delete('/:id', authenticate, requireAdmin, validateIdParam, ProductController.deleteProduct);
+router.delete('/:id', authenticate, requireAdmin, validateIdParam, ProductController.deleteProduct as any);
 
 /**
  * @swagger
@@ -496,6 +496,6 @@ router.delete('/:id', authenticate, requireAdmin, validateIdParam, ProductContro
  *       404:
  *         description: Product not found
  */
-router.patch('/:id/stock', authenticate, requireAdmin, validateIdParam, ProductController.updateStock);
+router.patch('/:id/stock', authenticate, requireAdmin, validateIdParam, ProductController.updateStock as any);
 
 export default router;

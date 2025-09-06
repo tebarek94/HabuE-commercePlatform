@@ -8,6 +8,7 @@ import { Plus, Edit, Trash2, Shield, UserCheck } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import { adminApi } from '@/lib/api';
 import toast from 'react-hot-toast';
+import UserForm from '@/components/admin/UserForm';
 
 interface AdminUser {
   id: number;
@@ -373,54 +374,36 @@ const AdminUsers: React.FC = () => {
       </Modal>
 
       {/* Create Admin Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Create New Admin User
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              This feature will be implemented with the admin management API.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => setShowCreateModal(false)}>
-                Create Admin
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Admin User"
+        size="lg"
+      >
+        <UserForm
+          onSubmit={handleCreateUser}
+          onCancel={() => setShowCreateModal(false)}
+          loading={loading}
+        />
+      </Modal>
 
       {/* Edit Admin Modal */}
-      {showEditModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Edit Admin User
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Editing: {selectedUser.first_name} {selectedUser.last_name}
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowEditModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => setShowEditModal(false)}>
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title={`Edit User - ${selectedUser?.first_name} ${selectedUser?.last_name}`}
+        size="lg"
+      >
+        <UserForm
+          user={selectedUser}
+          onSubmit={handleUpdateUser}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedUser(null);
+          }}
+          loading={loading}
+        />
+      </Modal>
     </div>
   );
 };

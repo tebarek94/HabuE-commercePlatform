@@ -31,7 +31,7 @@ export const verifyToken = (token: string): JwtPayload => {
 
 // Authentication middleware
 export const authenticate = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -61,7 +61,7 @@ export const authenticate = async (
     // Verify user still exists and is active
     const connection = await pool.getConnection();
     const [rows] = await connection.execute(
-      'SELECT id, email, role, is_active FROM users WHERE id = ? AND is_active = true',
+      'SELECT id, email, role, is_active FROM users WHERE id = ? AND (is_active = true OR is_active IS NULL)',
       [decoded.userId]
     );
     connection.release();
@@ -75,7 +75,7 @@ export const authenticate = async (
       return;
     }
 
-    req.user = decoded;
+    (req as any).user = decoded;
     next();
   } catch (error) {
     logger.error('Authentication error:', error);
@@ -88,11 +88,11 @@ export const authenticate = async (
 
 // Authorization middleware for admin only
 export const requireAdmin = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  if (!req.user) {
+  if (!(req as any).user) {
     res.status(401).json({
       success: false,
       message: 'Authentication required',
@@ -100,7 +100,7 @@ export const requireAdmin = (
     return;
   }
 
-  if (req.user.role !== 'admin') {
+  if ((req as any).user.role !== 'admin') {
     res.status(403).json({
       success: false,
       message: 'Admin access required',
@@ -113,11 +113,11 @@ export const requireAdmin = (
 
 // Authorization middleware for client only
 export const requireClient = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  if (!req.user) {
+  if (!(req as any).user) {
     res.status(401).json({
       success: false,
       message: 'Authentication required',
@@ -125,7 +125,7 @@ export const requireClient = (
     return;
   }
 
-  if (req.user.role !== 'client') {
+  if ((req as any).user.role !== 'client') {
     res.status(403).json({
       success: false,
       message: 'Client access required',
@@ -138,7 +138,7 @@ export const requireClient = (
 
 // Optional authentication middleware (doesn't fail if no token)
 export const optionalAuth = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -169,7 +169,7 @@ export const optionalAuth = async (
 
     const users = rows as any[];
     if (users.length > 0) {
-      req.user = decoded;
+      (req as any).user = decoded;
     }
 
     next();

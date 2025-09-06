@@ -573,12 +573,12 @@ export class ProductService {
   }
 
   // Get products by category
-  static async getProductsByCategory(categoryId: number, pagination: PaginationQuery = {}): Promise<{ products: Product[]; pagination: PaginationInfo }> {
-    return this.getProducts({ category_id: categoryId }, pagination);
+  static async getProductsByCategory(categoryId: number, pagination: PaginationQuery = {}, additionalFilters: ProductFilters = {}): Promise<{ products: Product[]; pagination: PaginationInfo }> {
+    return this.getProducts({ category_id: categoryId, ...additionalFilters }, pagination);
   }
 
   // Search products
-  static async searchProducts(searchTerm: string, pagination: PaginationQuery = {}): Promise<{ products: Product[]; pagination: PaginationInfo }> {
-    return this.getProducts({ search: searchTerm }, pagination);
+  static async searchProducts(searchTerm: string, pagination: PaginationQuery = {}, additionalFilters: ProductFilters = {}): Promise<{ products: Product[]; pagination: PaginationInfo }> {
+    return this.getProducts({ search: searchTerm, ...additionalFilters }, pagination);
   }
 }

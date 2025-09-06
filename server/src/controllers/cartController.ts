@@ -3,11 +3,14 @@ import { CartService } from '../services/cartService';
 import { CustomError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
+// Use Request with type assertion for user property
+type AuthenticatedRequest = Request;
+
 export class CartController {
   // Get user's cart items
-  static async getCartItems(req: Request, res: Response): Promise<void> {
+  static async getCartItems(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }
@@ -36,9 +39,9 @@ export class CartController {
   }
 
   // Add item to cart
-  static async addToCart(req: Request, res: Response): Promise<void> {
+  static async addToCart(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }
@@ -77,9 +80,9 @@ export class CartController {
   }
 
   // Update cart item quantity
-  static async updateCartItem(req: Request, res: Response): Promise<void> {
+  static async updateCartItem(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }
@@ -119,9 +122,9 @@ export class CartController {
   }
 
   // Remove item from cart
-  static async removeFromCart(req: Request, res: Response): Promise<void> {
+  static async removeFromCart(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }
@@ -155,9 +158,9 @@ export class CartController {
   }
 
   // Clear user's cart
-  static async clearCart(req: Request, res: Response): Promise<void> {
+  static async clearCart(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }
@@ -185,9 +188,9 @@ export class CartController {
   }
 
   // Get cart summary
-  static async getCartSummary(req: Request, res: Response): Promise<void> {
+  static async getCartSummary(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         throw new CustomError('User not authenticated', 401);
       }

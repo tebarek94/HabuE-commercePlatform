@@ -19,7 +19,7 @@ const router = Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authenticate, OrderController.getOrders);
+router.get('/', authenticate, OrderController.getOrders as any);
 
 /**
  * @swagger
@@ -44,7 +44,7 @@ router.get('/', authenticate, OrderController.getOrders);
  *       404:
  *         description: Order not found
  */
-router.get('/:id', authenticate, validateIdParam, OrderController.getOrderById);
+router.get('/:id', authenticate, validateIdParam, OrderController.getOrderById as any);
 
 /**
  * @swagger
@@ -82,9 +82,7 @@ router.get('/:id', authenticate, validateIdParam, OrderController.getOrderById);
  *       403:
  *         description: Client access required
  */
-router.post('/', authenticate, requireClient, validateOrderCreation, (req, res) => {
-  res.json({ message: 'Create order - TODO: Implement' });
-});
+router.post('/', authenticate, requireClient, validateOrderCreation, OrderController.createOrder as any);
 
 /**
  * @swagger
@@ -125,7 +123,7 @@ router.post('/', authenticate, requireClient, validateOrderCreation, (req, res) 
  *       404:
  *         description: Order not found
  */
-router.patch('/:id/status', authenticate, requireAdmin, validateIdParam, validateOrderStatusUpdate, OrderController.updateOrderStatus);
+router.patch('/:id/status', authenticate, requireAdmin, validateIdParam, validateOrderStatusUpdate, OrderController.updateOrderStatus as any);
 
 /**
  * @swagger
@@ -152,7 +150,7 @@ router.patch('/:id/status', authenticate, requireAdmin, validateIdParam, validat
  *       404:
  *         description: Order not found
  */
-router.patch('/:id/cancel', authenticate, requireClient, validateIdParam, (req, res) => {
+router.patch('/:id/cancel', authenticate, requireClient, validateIdParam, (req: any, res: any) => {
   res.json({ message: 'Cancel order - TODO: Implement' });
 });
 

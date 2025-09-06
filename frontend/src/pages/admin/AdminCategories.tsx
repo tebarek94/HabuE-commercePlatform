@@ -287,7 +287,6 @@ const AdminCategories: React.FC = () => {
             data={filteredCategories}
             columns={columns}
             loading={loading}
-            emptyMessage="No categories found"
           />
         </CardContent>
       </Card>

@@ -23,7 +23,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   className,
   showQuantity = false,
 }) => {
-  const { addToCart } = useCartActions();
+  const { addToCart, addToGuestCart } = useCartActions();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
@@ -31,29 +31,30 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
 
   const handleAddToCart = async () => {
     if (product.stock_quantity <= 0) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      // Store the intended action in localStorage for after login
-      localStorage.setItem('pendingCartAction', JSON.stringify({
-        productId: product.id,
-        quantity: quantity,
-        timestamp: Date.now()
-      }));
-      
-      // Show notification and redirect to login
-      toast.error('Please login to add items to your cart');
-      navigate('/login');
+      toast.error('This product is out of stock');
       return;
     }
 
     setIsLoading(true);
     try {
-      await addToCart(product, quantity);
+      if (isAuthenticated) {
+        // User is authenticated, use normal cart API
+        await addToCart(product, quantity);
+      } else {
+        // User is not authenticated, add to guest cart
+        addToGuestCart(product, quantity);
+        
+        // Show success message
+        toast.success(`${product.name} added to cart!`, {
+          duration: 3000,
+          icon: '🛒',
+        });
+      }
+      
       setQuantity(1); // Reset quantity after adding
     } catch (error) {
       // Error is handled by the store
+      console.error('Add to cart error:', error);
     } finally {
       setIsLoading(false);
     }

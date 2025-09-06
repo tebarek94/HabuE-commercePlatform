@@ -78,7 +78,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">Shipping</span>
           <span className="font-medium text-gray-900 dark:text-gray-100">
-            {totalPrice > 50 ? 'Free' : formatCurrency(9.99)}
+            {totalPrice >= 2500 ? 'Free' : formatCurrency(150)}
           </span>
         </div>
 
@@ -97,7 +97,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         <div className="flex justify-between text-lg font-semibold">
           <span className="text-gray-900 dark:text-gray-100">Total</span>
           <span className="text-gray-900 dark:text-gray-100">
-            {formatCurrency(totalPrice + (totalPrice > 50 ? 0 : 9.99) + (totalPrice * 0.08))}
+            {formatCurrency(totalPrice + (totalPrice >= 2500 ? 0 : 150) + (totalPrice * 0.08))}
           </span>
         </div>
 

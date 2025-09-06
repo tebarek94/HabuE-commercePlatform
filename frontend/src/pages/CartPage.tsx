@@ -1,17 +1,14 @@
 import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useCart, useCartActions } from '@/store/cartStore';
 import Button from '@/components/ui/Button';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import CartItem from '@/components/cart/CartItem';
 import CartSummary from '@/components/cart/CartSummary';
-import { formatCurrency } from '@/lib/utils';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, totalItems, totalPrice, isLoading } = useCart();
+  const { items, totalItems } = useCart();
   const { loadCart, clearCart } = useCartActions();
 
   // Load cart when component mounts
@@ -20,12 +17,12 @@ const CartPage: React.FC = () => {
   }, [loadCart]);
 
   const handleCheckout = () => {
-    navigate('/checkout');
+    navigate('/client/checkout');
   };
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-16">
             <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -53,7 +50,7 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

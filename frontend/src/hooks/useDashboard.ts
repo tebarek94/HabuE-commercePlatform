@@ -73,6 +73,7 @@ export const useDashboard = (): UseDashboardReturn => {
     setError(null);
     
     try {
+      console.log('Fetching dashboard data...');
       const [
         statsData,
         ordersData,
@@ -87,12 +88,14 @@ export const useDashboard = (): UseDashboardReturn => {
         adminApi.getRecentActivity(10)
       ]);
 
+      console.log('Dashboard data received:', { statsData, ordersData, productsData, categoriesData, activityData });
       setStats(statsData);
       setRecentOrders(ordersData || []);
       setTopProducts(productsData || []);
       setCategoryPerformance(categoriesData || []);
       setRecentActivity(activityData || []);
     } catch (err) {
+      console.error('Dashboard data fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
       setStats(null);
       setRecentOrders([]);

@@ -12,12 +12,12 @@ import { requestLogger } from './middleware/requestLogger';
 
 // Import routes
 import authRoutes from './routes/auth';
-import productRoutes from './routes/products';
-// Categories are handled in admin routes
-import orderRoutes from './routes/orders';
+import clientRoutes from './routes/client';
 import userRoutes from './routes/users';
 import cartRoutes from './routes/cart';
 import adminRoutes from './routes/admin';
+import chapaRoutes from './routes/chapaRoutes';
+import debugRoutes from './routes/debugRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -70,7 +70,7 @@ app.use(requestLogger);
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check endpoint
+// Health check endpoints
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -80,14 +80,25 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    message: 'Server is running successfully',
+  });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-// Categories are handled in admin routes
-app.use('/api/orders', orderRoutes);
+app.use('/api/client', clientRoutes);  // Client routes for viewing products and ordering
 app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes);    // Admin routes for CRUD operations
+app.use('/api/chapa', chapaRoutes);    // Chapa payment routes
+app.use('/api/debug', debugRoutes);    // Debug routes
 
 // 404 handler
 app.use('*', (req, res) => {

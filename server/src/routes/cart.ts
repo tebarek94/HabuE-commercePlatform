@@ -5,9 +5,8 @@ import { CartController } from '../controllers/cartController';
 
 const router = Router();
 
-// All cart routes require authentication and client role
+// All cart routes require authentication
 router.use(authenticate);
-router.use(requireClient);
 
 /**
  * @swagger
@@ -23,7 +22,7 @@ router.use(requireClient);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  */
 router.get('/', CartController.getCartItems);
 
@@ -41,7 +40,7 @@ router.get('/', CartController.getCartItems);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  */
 router.get('/summary', CartController.getCartSummary);
 
@@ -77,7 +76,7 @@ router.get('/summary', CartController.getCartSummary);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  */
 router.post('/', validateAddToCart, CartController.addToCart);
 
@@ -117,7 +116,7 @@ router.post('/', validateAddToCart, CartController.addToCart);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  *       404:
  *         description: Cart item not found
  */
@@ -144,7 +143,7 @@ router.put('/:id', validateIdParam, validateUpdateCartItem, CartController.updat
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  *       404:
  *         description: Cart item not found
  */
@@ -164,7 +163,7 @@ router.delete('/:id', validateIdParam, CartController.removeFromCart);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Client access required
+ *         description: Authentication required
  */
 router.delete('/clear', CartController.clearCart);
 

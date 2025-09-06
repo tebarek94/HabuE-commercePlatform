@@ -9,6 +9,9 @@ import Modal from '@/components/ui/Modal';
 import Alert from '@/components/ui/Alert';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import OrderDetailsModal from '@/components/admin/OrderDetailsModal';
+import { useAuth } from '@/store/authStore';
+import { canPerformAdminActions } from '@/utils/roleUtils';
 
 interface Order {
   id: number;
@@ -16,14 +19,19 @@ interface Order {
   customer_name: string;
   customer_email: string;
   total_amount: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
   payment_method: string;
+  transaction_reference?: string;
   shipping_address: string;
+  billing_address?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
   items: Array<{
     id: number;
     product_name: string;
+    product_image?: string;
     quantity: number;
     price: number;
   }>;
@@ -35,22 +43,53 @@ const AdminOrders: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [newStatus, setNewStatus] = useState<string>('');
+  const [newPaymentStatus, setNewPaymentStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const hasAdminAccess = canPerformAdminActions(user);
+  
+  // Debug logging
+  console.log('AdminOrders Debug:', {
+    isLoading,
+    isAuthenticated,
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      is_active: user.is_active,
+      first_name: user.first_name,
+      last_name: user.last_name
+    } : null,
+    hasAdminAccess,
+    hasAdminRole: user?.role === 'admin'
+  });
+
   // Fetch orders
   const fetchOrders = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await adminApi.getAllOrders({
+      const response = await adminApi.getAllOrders({
         limit: 50,
         status: statusFilter || undefined,
       });
-      setOrders(data || []);
+      
+      // Handle the response structure from the backend
+      if (response && typeof response === 'object' && 'orders' in response) {
+        setOrders((response as { orders: Order[] }).orders || []);
+      } else {
+        // Fallback for direct array response
+        setOrders(Array.isArray(response) ? response : []);
+      }
     } catch (err) {
+      console.error('Error fetching orders:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -59,71 +98,6 @@ const AdminOrders: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, [statusFilter]);
-
-  // Mock data for demonstration - remove when API is ready
-  const mockOrders: Order[] = [
-    {
-      id: 1,
-      order_number: 'ORD-2024-001',
-      customer_name: 'John Doe',
-      customer_email: 'john@example.com',
-      total_amount: 89.99,
-      status: 'delivered',
-      payment_method: 'credit_card',
-      shipping_address: '123 Main St, City, State 12345',
-      created_at: '2024-01-15T10:30:00Z',
-      updated_at: '2024-01-17T14:20:00Z',
-      items: [
-        { id: 1, product_name: 'Red Roses Bouquet', quantity: 1, price: 49.99 },
-        { id: 2, product_name: 'Mixed Spring Flowers', quantity: 1, price: 39.99 }
-      ]
-    },
-    {
-      id: 2,
-      order_number: 'ORD-2024-002',
-      customer_name: 'Jane Smith',
-      customer_email: 'jane@example.com',
-      total_amount: 65.50,
-      status: 'shipped',
-      payment_method: 'paypal',
-      shipping_address: '456 Oak Ave, City, State 12345',
-      created_at: '2024-01-20T09:15:00Z',
-      updated_at: '2024-01-21T16:45:00Z',
-      items: [
-        { id: 3, product_name: 'White Lilies', quantity: 2, price: 32.75 }
-      ]
-    },
-    {
-      id: 3,
-      order_number: 'ORD-2024-003',
-      customer_name: 'Bob Johnson',
-      customer_email: 'bob@example.com',
-      total_amount: 125.00,
-      status: 'processing',
-      payment_method: 'credit_card',
-      shipping_address: '789 Pine St, City, State 12345',
-      created_at: '2024-01-22T14:30:00Z',
-      updated_at: '2024-01-22T14:30:00Z',
-      items: [
-        { id: 4, product_name: 'Premium Orchid Collection', quantity: 1, price: 125.00 }
-      ]
-    },
-    {
-      id: 4,
-      order_number: 'ORD-2024-004',
-      customer_name: 'Alice Brown',
-      customer_email: 'alice@example.com',
-      total_amount: 45.75,
-      status: 'pending',
-      payment_method: 'cash_on_delivery',
-      shipping_address: '321 Elm St, City, State 12345',
-      created_at: '2024-01-23T16:45:00Z',
-      updated_at: '2024-01-23T16:45:00Z',
-      items: [
-        { id: 5, product_name: 'Sunflower Arrangement', quantity: 1, price: 45.75 }
-      ]
-    }
-  ];
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -153,11 +127,28 @@ const AdminOrders: React.FC = () => {
     }
   };
 
+  const handlePaymentStatusUpdate = async (orderId: number, newPaymentStatus: string) => {
+    setLoading(true);
+    try {
+      await adminApi.updatePaymentStatus(orderId, newPaymentStatus);
+      await fetchOrders();
+      setShowPaymentModal(false);
+      setSelectedOrder(null);
+      toast.success('Payment status updated successfully');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update payment status';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusIcon = (status: Order['status']) => {
     switch (status) {
       case 'pending':
         return <Clock className="h-4 w-4" />;
-      case 'processing':
+      case 'confirmed':
         return <Package className="h-4 w-4" />;
       case 'shipped':
         return <Truck className="h-4 w-4" />;
@@ -170,11 +161,26 @@ const AdminOrders: React.FC = () => {
     }
   };
 
+  const getPaymentStatusIcon = (status: Order['payment_status']) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4" />;
+      case 'paid':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4" />;
+      case 'refunded':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'processing':
+      case 'confirmed':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'shipped':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
@@ -186,6 +192,22 @@ const AdminOrders: React.FC = () => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
+
+  const getPaymentStatusColor = (status: Order['payment_status']) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'refunded':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -200,8 +222,8 @@ const AdminOrders: React.FC = () => {
   const columns = [
     {
       key: 'order_number',
-      title: 'Order #',
-      render: (order: Order) => (
+      label: 'Order #',
+      render: (_value: unknown, order: Order) => (
         <div>
           <p className="font-medium text-gray-900 dark:text-gray-100">{order.order_number}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(order.created_at)}</p>
@@ -210,8 +232,8 @@ const AdminOrders: React.FC = () => {
     },
     {
       key: 'customer',
-      title: 'Customer',
-      render: (order: Order) => (
+      label: 'Customer',
+      render: (_value: unknown, order: Order) => (
         <div>
           <p className="font-medium text-gray-900 dark:text-gray-100">{order.customer_name}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">{order.customer_email}</p>
@@ -220,8 +242,8 @@ const AdminOrders: React.FC = () => {
     },
     {
       key: 'total',
-      title: 'Total',
-      render: (order: Order) => (
+      label: 'Total',
+      render: (_value: unknown, order: Order) => (
         <span className="font-medium text-gray-900 dark:text-gray-100">
           {formatCurrency(order.total_amount)}
         </span>
@@ -229,8 +251,8 @@ const AdminOrders: React.FC = () => {
     },
     {
       key: 'status',
-      title: 'Status',
-      render: (order: Order) => (
+      label: 'Status',
+      render: (_value: unknown, order: Order) => (
         <span className={cn(
           'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
           getStatusColor(order.status)
@@ -242,17 +264,36 @@ const AdminOrders: React.FC = () => {
     },
     {
       key: 'payment',
-      title: 'Payment',
-      render: (order: Order) => (
-        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-          {order.payment_method.replace('_', ' ')}
-        </span>
+      label: 'Payment',
+      render: (_value: unknown, order: Order) => (
+        <div>
+          <div className="flex items-center space-x-2 mb-1">
+            <span className={cn(
+              'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+              getPaymentStatusColor(order.payment_status)
+            )}>
+              {order.payment_status === 'paid' && <CheckCircle className="h-3 w-3 mr-1" />}
+              {order.payment_status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+              {order.payment_status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
+              {order.payment_status === 'refunded' && <Package className="h-3 w-3 mr-1" />}
+              <span className="capitalize">{order.payment_status}</span>
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
+            {order.payment_method.replace('_', ' ')}
+          </p>
+          {order.transaction_reference && (
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+              {order.transaction_reference.substring(0, 12)}...
+            </p>
+          )}
+        </div>
       ),
     },
     {
       key: 'actions',
-      title: 'Actions',
-      render: (order: Order) => (
+      label: 'Actions',
+      render: (_value: unknown, order: Order) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={() => {
@@ -276,6 +317,53 @@ const AdminOrders: React.FC = () => {
       ),
     },
   ];
+
+  // Show access denied if user doesn't have admin permissions
+  // Show loading state while auth is being checked
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if user doesn't have admin permissions
+  // Allow access if user has admin role (fallback for backend issues)
+  const hasAdminRole = user?.role === 'admin';
+  const shouldDenyAccess = !hasAdminAccess && !hasAdminRole;
+  
+  if (shouldDenyAccess) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            You don't have permission to access this page. Admin access is required.
+          </p>
+          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-6 text-sm">
+            <p className="font-medium mb-2">Debug Info:</p>
+            <p>User: {user?.email || 'Not logged in'}</p>
+            <p>Role: {user?.role || 'No role'}</p>
+            <p>Active: {user?.is_active?.toString() || 'undefined'}</p>
+            <p>Has Admin Access: {hasAdminAccess.toString()}</p>
+            <p>Has Admin Role: {hasAdminRole.toString()}</p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => window.location.href = '/'}
+          >
+            Go to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -312,7 +400,7 @@ const AdminOrders: React.FC = () => {
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
+              <option value="confirmed">Confirmed</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
@@ -344,7 +432,6 @@ const AdminOrders: React.FC = () => {
             data={filteredOrders}
             columns={columns}
             loading={loading}
-            emptyMessage="No orders found"
           />
         </CardContent>
       </Card>
@@ -355,114 +442,14 @@ const AdminOrders: React.FC = () => {
           isOpen={showDetailsModal}
           onClose={() => setShowDetailsModal(false)}
           title={`Order Details - ${selectedOrder.order_number}`}
+          size="4xl"
         >
-          <div className="space-y-6">
-            {/* Order Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Order Number
-                </label>
-                <p className="text-gray-900 dark:text-gray-100">{selectedOrder.order_number}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <span className={cn(
-                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                  getStatusColor(selectedOrder.status)
-                )}>
-                  {getStatusIcon(selectedOrder.status)}
-                  <span className="ml-1 capitalize">{selectedOrder.status}</span>
-                </span>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Customer
-                </label>
-                <p className="text-gray-900 dark:text-gray-100">{selectedOrder.customer_name}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedOrder.customer_email}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Payment Method
-                </label>
-                <p className="text-gray-900 dark:text-gray-100 capitalize">
-                  {selectedOrder.payment_method.replace('_', ' ')}
-                </p>
-              </div>
-            </div>
-
-            {/* Order Items */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Order Items
-              </label>
-              <div className="space-y-3">
-                {selectedOrder.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {item.product_name}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Quantity: {item.quantity}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {formatCurrency(item.price)}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        each
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Shipping Address */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Shipping Address
-              </label>
-              <p className="text-gray-600 dark:text-gray-400">
-                {selectedOrder.shipping_address}
-              </p>
-            </div>
-
-            {/* Order Summary */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                  <span className="text-gray-900 dark:text-gray-100">
-                    {formatCurrency(selectedOrder.total_amount)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Shipping</span>
-                  <span className="text-gray-900 dark:text-gray-100">Free</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                  <span className="text-gray-900 dark:text-gray-100">
-                    {formatCurrency(selectedOrder.total_amount * 0.08)}
-                  </span>
-                </div>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span className="text-gray-900 dark:text-gray-100">Total</span>
-                    <span className="text-primary-600 dark:text-primary-400">
-                      {formatCurrency(selectedOrder.total_amount + (selectedOrder.total_amount * 0.08))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OrderDetailsModal
+            order={selectedOrder}
+            onClose={() => setShowDetailsModal(false)}
+            onUpdateStatus={handleStatusUpdate}
+            onUpdatePaymentStatus={handlePaymentStatusUpdate}
+          />
         </Modal>
       )}
 
@@ -518,6 +505,62 @@ const AdminOrders: React.FC = () => {
               disabled={!newStatus}
             >
               Update Status
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Update Payment Status Modal */}
+      <Modal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        title={`Update Payment Status - ${selectedOrder?.order_number}`}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Current Payment Status
+            </label>
+            <span className={cn(
+              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+              selectedOrder ? getPaymentStatusColor(selectedOrder.payment_status) : ''
+            )}>
+              {selectedOrder && getPaymentStatusIcon(selectedOrder.payment_status)}
+              <span className="ml-1 capitalize">{selectedOrder?.payment_status}</span>
+            </span>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              New Payment Status
+            </label>
+            <select 
+              value={newPaymentStatus}
+              onChange={(e) => setNewPaymentStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="">Select new payment status</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
+
+          <div className="flex space-x-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowPaymentModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => selectedOrder && newPaymentStatus && handlePaymentStatusUpdate(selectedOrder.id, newPaymentStatus)}
+              loading={loading}
+              disabled={!newPaymentStatus}
+            >
+              Update Payment Status
             </Button>
           </div>
         </div>

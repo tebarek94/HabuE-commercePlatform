@@ -89,7 +89,7 @@ router.get('/:id', authenticate, requireAdmin, validateIdParam, UserController.g
  *       404:
  *         description: User not found
  */
-router.patch('/:id/activate', authenticate, requireAdmin, validateIdParam, (req, res) => {
+router.patch('/:id/activate', authenticate, requireAdmin, validateIdParam, (req: any, res: any) => {
   res.json({ message: 'Activate user - TODO: Implement' });
 });
 
@@ -118,7 +118,7 @@ router.patch('/:id/activate', authenticate, requireAdmin, validateIdParam, (req,
  *       404:
  *         description: User not found
  */
-router.patch('/:id/deactivate', authenticate, requireAdmin, validateIdParam, (req, res) => {
+router.patch('/:id/deactivate', authenticate, requireAdmin, validateIdParam, (req: any, res: any) => {
   res.json({ message: 'Deactivate user - TODO: Implement' });
 });
 
@@ -161,7 +161,7 @@ router.patch('/:id/deactivate', authenticate, requireAdmin, validateIdParam, (re
  *       404:
  *         description: User not found
  */
-router.patch('/:id/role', authenticate, requireAdmin, validateIdParam, (req, res) => {
+router.patch('/:id/role', authenticate, requireAdmin, validateIdParam, (req: any, res: any) => {
   res.json({ message: 'Update user role - TODO: Implement' });
 });
 

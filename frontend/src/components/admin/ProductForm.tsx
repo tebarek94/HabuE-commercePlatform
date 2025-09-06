@@ -4,7 +4,13 @@ import { Category } from '@/types';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { getImageUrl } from '@/utils/imageUtils';
+
+// Utility function for image handling
+const getImageUrl = (imageUrl?: string): string => {
+  if (!imageUrl) return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42MjcgMzYgMzYgMzAuNjI3IDM2IDI0QzM2IDE3LjM3MjYgMzAuNjI3IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42MjcgMTcuMzcyNiAzNiAyNCAzNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMwQzI2LjIwOTEgMzAgMjggMjguMjA5MSAyOCAyNkMyOCAyMy43OTA5IDI2LjIwOTEgMjIgMjQgMjJDMjEuNzkwOSAyMiAyMCAyMy43OTA5IDIwIDI2QzIwIDI4LjIwOTEgMjEuNzkwOSAzMCAyNCAzMFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `http://localhost:3001${imageUrl}`;
+};
 
 interface ProductFormProps {
   product?: any;
@@ -28,7 +34,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
     category_id: '',
     image_url: '',
     stock_quantity: '',
-    is_active: true
+    is_active: true,
+    // Flower-specific fields
+    color: '',
+    season: '',
+    care_instructions: '',
+    bloom_time: '',
+    height: '',
+    fragrance: '',
+    vase_life: '',
+    origin: '',
+    difficulty_level: 'easy' as 'easy' | 'medium' | 'hard',
+    water_needs: 'medium' as 'low' | 'medium' | 'high',
+    light_requirements: 'partial_sun' as 'full_sun' | 'partial_sun' | 'shade'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,7 +64,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
         category_id: product.category_id.toString(),
         image_url: product.image_url || '',
         stock_quantity: product.stock_quantity.toString(),
-        is_active: product.is_active
+        is_active: product.is_active,
+        // Flower-specific fields
+        color: product.color || '',
+        season: product.season || '',
+        care_instructions: product.care_instructions || '',
+        bloom_time: product.bloom_time || '',
+        height: product.height || '',
+        fragrance: product.fragrance || '',
+        vase_life: product.vase_life?.toString() || '',
+        origin: product.origin || '',
+        difficulty_level: product.difficulty_level || 'easy',
+        water_needs: product.water_needs || 'medium',
+        light_requirements: product.light_requirements || 'partial_sun'
       });
       // Set image preview if product has an image
       if (product.image_url) {
@@ -194,7 +224,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              className={`w-full input-mobile border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                 errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Enter product name"
@@ -210,7 +240,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows={3}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              className={`w-full input-mobile border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                 errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Enter product description"
@@ -229,7 +259,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 min="0"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                className={`w-full input-mobile border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                   errors.price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
                 placeholder="0.00"
@@ -246,7 +276,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 min="0"
                 value={formData.stock_quantity}
                 onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                className={`w-full input-mobile border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                   errors.stock_quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
                 placeholder="0"
@@ -262,7 +292,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <select
               value={formData.category_id}
               onChange={(e) => handleInputChange('category_id', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              className={`w-full input-mobile border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                 errors.category_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
             >
@@ -367,6 +397,178 @@ const ProductForm: React.FC<ProductFormProps> = ({
             {errors.image && <p className="text-red-500 text-sm mt-1">{errors.image}</p>}
           </div>
 
+          {/* Flower-Specific Fields */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              🌸 Flower Details
+            </h4>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Color
+                </label>
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => handleInputChange('color', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="e.g., Red, Pink, White, Mixed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Season
+                </label>
+                <select
+                  value={formData.season}
+                  onChange={(e) => handleInputChange('season', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">Select season</option>
+                  <option value="spring">Spring</option>
+                  <option value="summer">Summer</option>
+                  <option value="autumn">Autumn</option>
+                  <option value="winter">Winter</option>
+                  <option value="year_round">Year Round</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Bloom Time
+                </label>
+                <input
+                  type="text"
+                  value={formData.bloom_time}
+                  onChange={(e) => handleInputChange('bloom_time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="e.g., Early Spring, Late Summer"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Height
+                </label>
+                <input
+                  type="text"
+                  value={formData.height}
+                  onChange={(e) => handleInputChange('height', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="e.g., 12-18 inches"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Fragrance
+                </label>
+                <select
+                  value={formData.fragrance}
+                  onChange={(e) => handleInputChange('fragrance', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">Select fragrance</option>
+                  <option value="none">No Fragrance</option>
+                  <option value="light">Light</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="strong">Strong</option>
+                  <option value="sweet">Sweet</option>
+                  <option value="citrus">Citrus</option>
+                  <option value="spicy">Spicy</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Vase Life (days)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={formData.vase_life}
+                  onChange={(e) => handleInputChange('vase_life', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="7"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Origin
+                </label>
+                <input
+                  type="text"
+                  value={formData.origin}
+                  onChange={(e) => handleInputChange('origin', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="e.g., Netherlands, Colombia, Local"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Difficulty Level
+                </label>
+                <select
+                  value={formData.difficulty_level}
+                  onChange={(e) => handleInputChange('difficulty_level', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Water Needs
+                </label>
+                <select
+                  value={formData.water_needs}
+                  onChange={(e) => handleInputChange('water_needs', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Light Requirements
+                </label>
+                <select
+                  value={formData.light_requirements}
+                  onChange={(e) => handleInputChange('light_requirements', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="full_sun">Full Sun</option>
+                  <option value="partial_sun">Partial Sun</option>
+                  <option value="shade">Shade</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Care Instructions
+              </label>
+              <textarea
+                value={formData.care_instructions}
+                onChange={(e) => handleInputChange('care_instructions', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                placeholder="Detailed care instructions for customers..."
+              />
+            </div>
+          </div>
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -391,7 +593,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Price:</span>
                 <span className="ml-2 text-gray-900 dark:text-gray-100">
-                  {formData.price ? `$${parseFloat(formData.price).toFixed(2)}` : 'Not specified'}
+                  {formData.price ? `${parseFloat(formData.price).toFixed(2)} ETB` : 'Not specified'}
                 </span>
               </div>
               <div>

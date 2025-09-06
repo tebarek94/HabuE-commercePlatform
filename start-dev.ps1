@@ -1,24 +1,19 @@
-# Flower E-commerce Development Environment Startup Script
+# PowerShell script to start both frontend and backend
+Write-Host "Starting Habu E-commerce Development Environment..." -ForegroundColor Green
 
-Write-Host "Starting Flower E-commerce Development Environment..." -ForegroundColor Green
-Write-Host ""
+# Start backend server
+Write-Host "Starting backend server..." -ForegroundColor Yellow
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd server; npm run dev"
 
-# Start Backend Server
-Write-Host "Starting Backend Server (Port 3000)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd server; npm run dev" -WindowStyle Normal
-
-# Wait for backend to start
-Write-Host "Waiting 3 seconds for backend to start..." -ForegroundColor Cyan
+# Wait a moment for backend to start
 Start-Sleep -Seconds 3
 
-# Start Frontend Server
-Write-Host "Starting Frontend Server (Port 3001)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev" -WindowStyle Normal
+# Start frontend server
+Write-Host "Starting frontend server..." -ForegroundColor Yellow
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev"
 
-Write-Host ""
 Write-Host "Both servers are starting..." -ForegroundColor Green
+Write-Host "Frontend: http://localhost:5173" -ForegroundColor Cyan
 Write-Host "Backend: http://localhost:3000" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:3001" -ForegroundColor Cyan
-Write-Host ""
 Write-Host "Press any key to exit..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

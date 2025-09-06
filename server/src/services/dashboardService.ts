@@ -352,4 +352,96 @@ export class DashboardService {
       throw new CustomError('Failed to get analytics data', 500);
     }
   }
+
+  // Get all orders for admin with filters
+  static async getAllOrders(filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    payment_status?: string;
+    date_from?: string;
+    date_to?: string;
+  }) {
+    try {
+      const connection = await pool.getConnection();
+      
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const offset = (page - 1) * limit;
+
+      let whereConditions = [];
+      let queryParams: any[] = [];
+
+      if (filters.status) {
+        whereConditions.push('o.status = ?');
+        queryParams.push(filters.status);
+      }
+
+      if (filters.payment_status) {
+        whereConditions.push('o.payment_status = ?');
+        queryParams.push(filters.payment_status);
+      }
+
+      if (filters.date_from) {
+        whereConditions.push('o.created_at >= ?');
+        queryParams.push(filters.date_from);
+      }
+
+      if (filters.date_to) {
+        whereConditions.push('o.created_at <= ?');
+        queryParams.push(filters.date_to);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+      // Get orders with pagination
+      const [orders] = await connection.execute(`
+        SELECT 
+          o.id,
+          o.order_number,
+          CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+          u.email as customer_email,
+          o.total_amount,
+          o.status,
+          o.payment_status,
+          o.payment_method,
+          o.shipping_address,
+          o.created_at,
+          o.updated_at
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        ${whereClause}
+        ORDER BY o.created_at DESC
+        LIMIT ? OFFSET ?
+      `, [...queryParams, limit, offset]);
+
+      // Get total count
+      const [countResult] = await connection.execute(`
+        SELECT COUNT(*) as total
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        ${whereClause}
+      `, queryParams);
+
+      connection.release();
+
+      const total = (countResult as any[])[0].total;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        orders: orders as any[],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        },
+      };
+    } catch (error) {
+      logger.error('Get all orders error:', error);
+      throw new CustomError('Failed to get orders', 500);
+    }
+  }
 }

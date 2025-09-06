@@ -117,4 +117,33 @@ export class DashboardController {
       next(error);
     }
   }
+
+  // Get all orders for admin
+  static async getAllOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const status = req.query.status as string;
+      const payment_status = req.query.payment_status as string;
+      const date_from = req.query.date_from as string;
+      const date_to = req.query.date_to as string;
+
+      const orders = await DashboardService.getAllOrders({
+        page,
+        limit,
+        status,
+        payment_status,
+        date_from,
+        date_to,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Orders retrieved successfully',
+        data: orders,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, AuthResponse } from '@/types';
-import { authApi } from '@/lib/api';
+import { authApi, clientOrdersApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface AuthState {
@@ -20,6 +20,7 @@ interface AuthActions {
     first_name: string;
     last_name: string;
     phone?: string;
+    role?: string;
   }) => Promise<User>;
   logout: () => void;
   updateProfile: (userData: {
@@ -28,7 +29,7 @@ interface AuthActions {
     phone?: string;
   }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  createOrder: (orderData: any) => Promise<void>;
+  createOrder: (orderData: any) => Promise<any>;
   refreshAuthToken: () => Promise<void>;
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
@@ -58,6 +59,11 @@ export const useAuthStore = create<AuthStore>()(
             refreshToken: response.refreshToken,
             isAuthenticated: true,
             isLoading: false,
+          });
+          console.log('Login successful - auth state set:', {
+            user: response.user.email,
+            hasToken: !!response.token,
+            isAuthenticated: true
           });
           toast.dismiss(loadingToast);
           toast.success('Login successful!');
@@ -98,6 +104,11 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: true,
             isLoading: false,
           });
+          console.log('Registration successful - auth state set:', {
+            user: response.user.email,
+            hasToken: !!response.token,
+            isAuthenticated: true
+          });
           toast.dismiss(loadingToast);
           toast.success('Registration successful! Welcome!');
           return response.user; // Return user data for redirect logic
@@ -127,6 +138,8 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
+        console.log('Logout called - clearing auth state');
+        console.trace('Logout call stack');
         set({
           user: null,
           token: null,
@@ -196,16 +209,29 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      createOrder: async (_orderData: any) => {
+      createOrder: async (orderData: any) => {
         set({ isLoading: true });
         try {
-          // TODO: Implement order creation API call
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+          const response = await clientOrdersApi.createOrder(orderData);
           set({ isLoading: false });
           toast.success('Order created successfully!');
-        } catch (error) {
+          return response;
+        } catch (error: any) {
           set({ isLoading: false });
-          const message = error instanceof Error ? error.message : 'Order creation failed';
+          let message = 'Order creation failed. Please try again.';
+          
+          if (error.response?.data?.message) {
+            message = error.response.data.message;
+          } else if (error.response?.status === 400) {
+            message = 'Please check your order information and try again.';
+          } else if (error.response?.status === 401) {
+            message = 'Please log in to create an order.';
+          } else if (error.response?.status >= 500) {
+            message = 'Server error. Please try again later.';
+          } else if (error.message) {
+            message = error.message;
+          }
+          
           toast.error(message);
           throw error;
         }

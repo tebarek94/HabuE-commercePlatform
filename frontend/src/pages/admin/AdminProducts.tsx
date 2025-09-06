@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, Search, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { productsApi } from '@/lib/api';
+import { adminApi } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import  {Card, CardContent, CardHeader } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
@@ -12,7 +11,19 @@ import Alert from '@/components/ui/Alert';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import ProductForm from '@/components/admin/ProductForm';
-import { getImageUrl } from '@/utils/imageUtils';
+import { useAuth } from '@/store/authStore';
+import { canPerformAdminActions } from '@/utils/roleUtils';
+
+// Utility functions for image handling
+const getImageUrl = (imageUrl?: string): string => {
+  if (!imageUrl) return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42MjcgMzYgMzYgMzAuNjI3IDM2IDI0QzM2IDE3LjM3MjYgMzAuNjI3IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42MjcgMTcuMzcyNiAzNiAyNCAzNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMwQzI2LjIwOTEgMzAgMjggMjguMjA5MSAyOCAyNkMyOCAyMy43OTA5IDI2LjIwOTEgMjIgMjQgMjJDMjEuNzkwOSAyMiAyMCAyMy43OTA5IDIwIDI2QzIwIDI4LjIwOTEgMjEuNzkwOSAzMCAyNCAzMFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `http://localhost:3001${imageUrl}`;
+};
+
+const getPlaceholderImageUrl = (): string => {
+  return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42MjcgMzYgMzYgMzAuNjI3IDM2IDI0QzM2IDE3LjM3MjYgMzAuNjI3IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42MjcgMTcuMzcyNiAzNiAyNCAzNloiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMwQzI2LjIwOTEgMzAgMjggMjguMjA5MSAyOCAyNkMyOCAyMy43OTA5IDI2LjIwOTEgMjIgMjQgMjJDMjEuNzkwOSAyMiAyMCAyMy43OTA5IDIwIDI2QzIwIDI4LjIwOTEgMjEuNzkwOSAzMCAyNCAzMFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=';
+};
 
 interface Product {
   id: number;
@@ -35,22 +46,78 @@ const AdminProducts: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { products, refetch } = useProducts({
-    pagination: { limit: 50 }
+  const [products, setProducts] = useState<Product[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0
   });
-  const { categories } = useCategories();
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { categories } = useCategories();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  // Check if user has admin permissions
+  const hasAdminAccess = canPerformAdminActions(user);
+  
+  // Debug logging
+  console.log('AdminProducts Debug:', {
+    isLoading,
+    isAuthenticated,
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      is_active: user.is_active,
+      first_name: user.first_name,
+      last_name: user.last_name
+    } : null,
+    hasAdminAccess,
+    canAccessAdmin: user?.role === 'admin' && user?.is_active === true,
+    hasAdminRole: user?.role === 'admin'
+  });
+
+  // Fetch products using admin API
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await adminApi.getProducts({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchQuery || undefined,
+      });
+      
+      setProducts((response.data as Product[]) || []);
+      setPagination(response.pagination || pagination);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  React.useEffect(() => {
+    fetchProducts();
+  }, [pagination.page, searchQuery]);
+
+  // Debounced search
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== '') {
+        fetchProducts();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const handleDelete = async (productId: number) => {
     setLoading(true);
     try {
-      await productsApi.deleteProduct(productId);
-      await refetch();
+      await adminApi.deleteProduct(productId);
+      await fetchProducts();
       setShowDeleteModal(false);
       setSelectedProduct(null);
       toast.success('Product deleted successfully');
@@ -66,8 +133,8 @@ const AdminProducts: React.FC = () => {
   const handleToggleStatus = async (productId: number, currentStatus: boolean) => {
     setLoading(true);
     try {
-      await productsApi.updateProduct(productId, { is_active: !currentStatus });
-      await refetch();
+      await adminApi.updateProduct(productId, { is_active: !currentStatus });
+      await fetchProducts();
       toast.success(`Product ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update product status';
@@ -92,11 +159,11 @@ const AdminProducts: React.FC = () => {
         formData.append('is_active', productData.is_active.toString());
         formData.append('image', productData.imageFile);
         
-        await productsApi.createProductWithImage(formData);
+        await adminApi.createProductWithImage(formData);
       } else {
-        await productsApi.createProduct(productData);
+        await adminApi.createProduct(productData);
       }
-      await refetch();
+      await fetchProducts();
       setShowAddModal(false);
       toast.success('Product created successfully');
     } catch (err) {
@@ -125,11 +192,11 @@ const AdminProducts: React.FC = () => {
         formData.append('is_active', productData.is_active.toString());
         formData.append('image', productData.imageFile);
         
-        await productsApi.updateProductWithImage(selectedProduct.id, formData);
+        await adminApi.updateProductWithImage(selectedProduct.id, formData);
       } else {
-        await productsApi.updateProduct(selectedProduct.id, productData);
+        await adminApi.updateProduct(selectedProduct.id, productData);
       }
-      await refetch();
+      await fetchProducts();
       setShowEditModal(false);
       setSelectedProduct(null);
       toast.success('Product updated successfully');
@@ -137,7 +204,7 @@ const AdminProducts: React.FC = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update product';
       setError(errorMessage);
       toast.error(errorMessage);
-      throw err; // Re-throw to prevent form from closing
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -147,35 +214,24 @@ const AdminProducts: React.FC = () => {
     {
       key: 'image',
       label: 'Image',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-          {product.image_url ? (
-            <img
-              src={getImageUrl(product.image_url)}
-              alt={product.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // Fallback to placeholder if image fails to load
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><span class="text-lg">🌸</span></div>';
-                }
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <span className="text-lg">🌸</span>
-            </div>
-          )}
+          <img
+            src={getImageUrl(product.image_url)}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = getPlaceholderImageUrl();
+            }}
+          />
         </div>
       ),
     },
     {
       key: 'name',
       label: 'Product Name',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <div>
           <p className="font-medium text-gray-900 dark:text-gray-100">{product.name}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">{product.category_name}</p>
@@ -185,7 +241,7 @@ const AdminProducts: React.FC = () => {
     {
       key: 'price',
       label: 'Price',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <span className="font-medium text-gray-900 dark:text-gray-100">
           {formatCurrency(product.price)}
         </span>
@@ -194,7 +250,7 @@ const AdminProducts: React.FC = () => {
     {
       key: 'stock',
       label: 'Stock',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <span className={cn(
           'px-2 py-1 rounded-full text-xs font-medium',
           product.stock_quantity > 10
@@ -210,7 +266,7 @@ const AdminProducts: React.FC = () => {
     {
       key: 'status',
       label: 'Status',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <button
           onClick={() => handleToggleStatus(product.id, product.is_active)}
           className={cn(
@@ -227,11 +283,12 @@ const AdminProducts: React.FC = () => {
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: unknown, product: Product) => (
+      render: (_value: unknown, product: Product) => (
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => setSelectedProduct(product)}
+            onClick={() => window.open(`/product/${product.id}`, '_blank')}
             className="p-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            title="View Product Details"
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -257,6 +314,52 @@ const AdminProducts: React.FC = () => {
       ),
     },
   ];
+
+  // Show loading state while auth is being checked
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if user doesn't have admin permissions
+  // Allow access if user has admin role (fallback for backend issues)
+  const hasAdminRole = user?.role === 'admin';
+  const shouldDenyAccess = !hasAdminAccess && !hasAdminRole;
+  
+  if (shouldDenyAccess) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            You don't have permission to access this page. Admin access is required.
+          </p>
+          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-6 text-sm">
+            <p className="font-medium mb-2">Debug Info:</p>
+            <p>User: {user?.email || 'Not logged in'}</p>
+            <p>Role: {user?.role || 'No role'}</p>
+            <p>Active: {user?.is_active?.toString() || 'undefined'}</p>
+            <p>Has Admin Access: {hasAdminAccess.toString()}</p>
+            <p>Has Admin Role: {hasAdminRole.toString()}</p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => window.location.href = '/'}
+          >
+            Go to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -315,14 +418,16 @@ const AdminProducts: React.FC = () => {
       <Card>
         <CardHeader>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            All Products ({filteredProducts.length})
+            All Products ({pagination.total})
           </h3>
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredProducts}
+            data={products}
             columns={columns}
             loading={loading}
+            pagination={pagination}
+            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
           />
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
-import { CreateUserRequest, LoginRequest, AuthenticatedRequest } from '../types';
+import { CreateUserRequest, LoginRequest } from '../types';
 import { CustomError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
@@ -38,13 +38,13 @@ export class AuthController {
   }
 
   // Get current user profile
-  static async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
+      if (!(req as any).user) {
         throw new CustomError('User not authenticated', 401);
       }
 
-      const user = await AuthService.getUserById(req.user.userId);
+      const user = await AuthService.getUserById((req as any).user.userId);
       if (!user) {
         throw new CustomError('User not found', 404);
       }
@@ -60,14 +60,14 @@ export class AuthController {
   }
 
   // Update user profile
-  static async updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
+      if (!(req as any).user) {
         throw new CustomError('User not authenticated', 401);
       }
 
       const updateData = req.body;
-      const updatedUser = await AuthService.updateUser(req.user.userId, updateData);
+      const updatedUser = await AuthService.updateUser((req as any).user.userId, updateData);
 
       res.status(200).json({
         success: true,
@@ -80,9 +80,9 @@ export class AuthController {
   }
 
   // Change password
-  static async changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
+      if (!(req as any).user) {
         throw new CustomError('User not authenticated', 401);
       }
 
@@ -92,7 +92,7 @@ export class AuthController {
         throw new CustomError('Current password and new password are required', 400);
       }
 
-      await AuthService.changePassword(req.user.userId, currentPassword, newPassword);
+      await AuthService.changePassword((req as any).user.userId, currentPassword, newPassword);
 
       res.status(200).json({
         success: true,

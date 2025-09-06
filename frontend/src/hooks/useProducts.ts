@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Product, ProductFilters, PaginationInfo } from '@/types';
-import { productsApi } from '@/lib/api';
+import { clientProductsApi } from '@/lib/api';
 
 interface UseProductsOptions {
   filters?: ProductFilters;
@@ -36,7 +36,7 @@ export const useProducts = (options: UseProductsOptions = {}): UseProductsReturn
     setError(null);
     
     try {
-      const response = await productsApi.getProducts({
+      const response = await clientProductsApi.getProducts({
         ...currentFilters,
         page: currentPage,
         limit: pagination.limit || 12,
