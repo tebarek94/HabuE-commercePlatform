@@ -1,0 +1,60 @@
+services:
+  # Backend API Service
+  - type: web
+    name: habu-backend
+    env: node
+    plan: starter
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: habu-database
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: habu-database
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: habu-database
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: habu-database
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: habu-database
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+    healthCheckPath: /health
+
+  # Frontend Service
+  - type: web
+    name: habu-frontend
+    env: static
+    plan: starter
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: habu-backend
+          property: host
+
+  # Database
+  - type: pserv
+    name: habu-database
+    plan: starter
+    engine: mysql
+    databaseName: habu_production
+    user: habu_user
